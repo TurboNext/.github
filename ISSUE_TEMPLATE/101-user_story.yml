@@ -1,0 +1,58 @@
+name: User Story
+description: Create a new User Story (subtask of a Topic)
+title: "[User story] "
+labels: ["user story"]
+type: "User Story"
+body:
+  - type: markdown
+    attributes:
+      value: |  
+        ## User Story  
+        A User Story describes an abstract goal that contributes to a Topic.  
+        It is usually created by a user as a user requirement. 
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the goal and expected behaviour.
+      placeholder:
+    validations:
+      required: true
+
+  - type: textarea
+    id: business_value
+    attributes:
+      label: Business Value
+      description: Describe the value this user story brings to the business. Why is it important? How does it contribute to the overall goals of the project or organization?
+      placeholder:
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance Criteria / Definition of Done
+      description: Clearly define when this story is considered done.
+      placeholder: |  
+        - [ ] acceptance criterion 1
+    validations:
+      required: true
+
+  - type: textarea
+    id: definition_of_done
+    attributes:
+      label: Definition of Done
+      description: >
+        Clearly define when this feature is considered done. You can use provided template or modify it as needed.
+      placeholder: |  
+        - [ ] user story was validated by non-author
+        - [ ] user story was merged to main branch
+        - [ ] tests for this user story were added and passed
+            - [ ] unit tests
+            - [ ] feature-wise conformance tests
+        - [ ] logging for this user story was added
+        - [ ] documentation for this user story was added/updated
+    validations:
+      required: true
+

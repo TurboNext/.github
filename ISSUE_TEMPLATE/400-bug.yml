@@ -1,0 +1,51 @@
+name: 🐛 Bug report
+description: Raise an issue here if you find a bug.
+title: "[Bug]: "
+labels: ["Bug"]
+type: "Bug"
+
+body:
+  - type: textarea
+    attributes:
+      label: Describe the bug
+      description: |
+        Please provide a clear and concise description of what the bug is.
+
+        If possible, include the error message you got, with the full traceback.
+        
+        Please also provide the expected behaviour.
+      placeholder: |
+        ## Bug description:
+        
+        ## Expected behaviour:
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Reproduction steps
+      description: |
+        Please provide a clear and concise set of steps to reproduce the bug.
+
+      placeholder: |
+        ## Steps to reproduce:
+        ....
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Environment
+      description: |
+         Please collect as much info about environment as possible:
+      value: |
+        ## Environment details:
+        
+        - TLLM version:
+        - cluster configuration:
+        - hardware configuration:
+        - logs: 
+        - model name:
+        - what was running when the issue occurred:
+    validations:
+      required: true

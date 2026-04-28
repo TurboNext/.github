@@ -1,0 +1,37 @@
+name: Task
+description: A piece of work that does not directly modify the product
+title: "[Task]: "
+labels: ["task"]
+type: "Task"
+
+body:
+- type: textarea
+  attributes:
+    label: The task
+    description: >
+      A clear and concise description of the task. Who needs the task and why?
+  validations:
+    required: true
+
+- type: textarea
+  attributes:
+    label: Acceptance criteria
+    description: >
+      Clearly describe the conditions that must be met for this feature to be considered complete.
+    placeholder: |
+      - [ ] acceptance criterion 1
+  validations:
+    required: false
+
+- type: textarea
+  attributes:
+    label: Definition of Done
+    description: >
+      Clearly define when this feature is considered done. You can use provided template or modify it as needed.
+    placeholder: |  
+      - [ ] user story was merged to main branch
+      - [ ] tests for this user story were added and passed
+      - [ ] logging for this user story was added
+      - [ ] documentation for this user story was added/updated
+  validations:
+    required: false

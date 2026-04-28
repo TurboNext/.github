@@ -1,0 +1,14 @@
+name: Topic
+description: Create a new Topic to group related issues.
+title: "[Topic] "
+labels: ["topic"]
+type: "Topic"
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Short description of the topic
+      placeholder:
+    validations:
+      required: false

@@ -1,0 +1,38 @@
+name: Feature
+description: A modification of the product code
+title: "[Feature]: "
+labels: ["feature"]
+type: "Feature"
+
+body:
+- type: textarea
+  attributes:
+    label: Change
+    description: >
+      A clear and concise description of the feature. What needs to be built or changed? What problem does it solve?
+  validations:
+    required: true
+
+- type: textarea
+  attributes:
+    label: Acceptance criteria
+    description: >
+      Clearly describe the conditions that must be met for this feature to be considered complete.
+    placeholder: |
+      - [ ] acceptance criterion 1
+  validations:
+    required: false
+
+- type: textarea
+  id: definition_of_done
+  attributes:
+    label: Definition of Done
+    description: >
+      Clearly define when this feature is considered done. You can use provided template or modify it as needed.
+    placeholder: |  
+      - [ ] user story was merged to main branch
+      - [ ] tests for this user story were added and passed
+      - [ ] logging for this user story was added
+      - [ ] documentation for this user story was added/updated
+  validations:
+    required: true
