@@ -6,4 +6,5 @@ on:
 
 jobs:
   call-workflow:
-    uses: TurboNext/.github/workflows/reusable_validate_pr.yml@main
+    uses: TurboNext/.github/.github/workflows/reusable_validate_pr.yml@main
+    secrets: inherit
