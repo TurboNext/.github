@@ -1,21 +1,26 @@
-async function extractGithubIssueReferences(body, keywords, github, context) {
+async function extractGithubIssueReferences(body, keywords, github, context, repo) {
 // match keywords followed by #issue_number, case insensitive
   const keywordsPattern = keywords.join("|");
   const regex = new RegExp(`\\b(${keywordsPattern})\\s+#(\\d+)`, "gi");
 
   const matches = [];
   let match;
+  if (repo == null){
+      repo = context.repo.repo
+  }
 
   while ((match = regex.exec(body)) !== null) {
     const issueNumber = Number(match[2]);
+    console.log(issueNumber)
 
     try {
       // Check if the issue exists in the repository
       const { data: issue } = await github.rest.issues.get({
         owner: context.repo.owner,
-        repo: context.repo.repo,
+        repo: repo,
         issue_number: issueNumber
       });
+      console.log(issue)
 
       if (!('pull_request' in issue)) {
           matches.push({
@@ -91,9 +96,10 @@ async function validatePr ({ github, context, core }) {
         return;
     }
 
-    const githubIssueRefs = await extractGithubIssueReferences(body, githubKeywords, github, context);
-    const turbonextIssueRefs = await extractGithubIssueReferences(body, turbonextKeywords, github, context);
-    const allIssueRefs = [...githubIssueRefs, ...turbonextIssueRefs];
+    const githubIssueRefs = await extractGithubIssueReferences(body, githubKeywords, github, context, null);
+    const turbonextIssueRefs = await extractGithubIssueReferences(body, turbonextKeywords, github, context, null);
+    const oldRepoIssueRefs = await extractGithubIssueReferences(body, githubKeywords, github, context, "vllm-tn");
+    const allIssueRefs = [...githubIssueRefs, ...turbonextIssueRefs, ...oldRepoIssueRefs];
 
     const linkedIssues = await getClosingIssueReferences(github, context);
 
