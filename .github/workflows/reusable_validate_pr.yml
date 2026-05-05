@@ -8,8 +8,10 @@ jobs:
     name: Validate PR Description and linked issue
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout .github repository
         uses: actions/checkout@v6.0.2
+        with:
+          repository: TurboNext/.github
 
       - name: Check PR description
         uses: actions/github-script@v8
