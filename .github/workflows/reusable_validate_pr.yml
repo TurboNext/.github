@@ -12,11 +12,17 @@ jobs:
         uses: actions/checkout@v6.0.2
         with:
           repository: TurboNext/.github
+          ref: main
+          token: ${{ github.token }}
+          persist-credentials: false
+
+      - name: Verify checkout
+        run: ls -la .github/workflows/scripts/
 
       - name: Check PR description
         uses: actions/github-script@v8
         with:
-          github-token: ${{ secrets.GHP_TOKEN }}
+          github-token: ${{ github.token }}
           script: |
             const { validatePr } = require('./.github/workflows/scripts/validate_pr.js');
             await validatePr({ github, context, core });
@@ -24,7 +30,7 @@ jobs:
       - name: Check PR labels
         uses: actions/github-script@v8
         with:
-          github-token: ${{ secrets.GHP_TOKEN }}
+          github-token: ${{ github.token }}
           script: |
             const script = require('./.github/workflows/scripts/check_labels.js');
             await script({ github, context, core });
