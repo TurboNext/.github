@@ -8,22 +8,23 @@ jobs:
     name: Validate PR Description and linked issue
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout .github repository
         uses: actions/checkout@v6.0.2
-
+        with:
+          repository: TurboNext/.github
 
       - name: Check PR description
         uses: actions/github-script@v8
         with:
-          github-token: ${{ secrets.GHP_TOKEN }}
+          github-token: ${{ github.token }}
           script: |
-            const { validatePr } = require('TurboNext/.github/.github/workflows/scripts/validate_pr.js@main');
+            const { validatePr } = require('./.github/workflows/scripts/validate_pr.js');
             await validatePr({ github, context, core });
 
       - name: Check PR labels
         uses: actions/github-script@v8
         with:
-          github-token: ${{ secrets.GHP_TOKEN }}
+          github-token: ${{ github.token }}
           script: |
-            const script = require('TurboNext/.github/.github/workflows/scripts/check_labels.js@main');
+            const script = require('./.github/workflows/scripts/check_labels.js');
             await script({ github, context, core });
