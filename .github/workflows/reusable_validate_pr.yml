@@ -2,6 +2,9 @@ name: Validate Pull Request
 
 on:
   workflow_call:
+    secrets:
+      GHP_TOKEN:
+        required: true
 
 jobs:
   validate:
