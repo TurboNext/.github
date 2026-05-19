@@ -4,7 +4,7 @@ on:
   workflow_call:
     secrets:
       GHP_TOKEN:
-        required: true
+        required: false
 
 jobs:
   validate:
@@ -20,7 +20,7 @@ jobs:
       - name: Check PR description
         uses: actions/github-script@v8
         with:
-          github-token: ${{ secrets.GHP_TOKEN }}
+          github-token: ${{ secrets.GHP_TOKEN || github.token }}
           script: |
             const { validatePr } = require('./workflows/.github/workflows/scripts/validate_pr.js');
             await validatePr({ github, context, core });
@@ -28,7 +28,7 @@ jobs:
       - name: Check PR labels
         uses: actions/github-script@v8
         with:
-          github-token: ${{ secrets.GHP_TOKEN }}
+          github-token: ${{ secrets.GHP_TOKEN || github.token }}
           script: |
             const script = require('./workflows/.github/workflows/scripts/check_labels.js');
             await script({ github, context, core });
