@@ -92,9 +92,8 @@ async function validatePr ({ github, context, core }) {
             "Expected format:\n" +
             "type(scope[optional]): description\n\n" +
             "Examples:\n" +
-            "feat(model split): added Q\n" +
-            "fix(api): prevent duplicate orders\n" +
-            "chore(ci): update workflows"
+            "feat(model split): added Qwen split\n" +
+            "fix(data parallel): prevents serving from crashing when dp > 4\n" +
         `);
     }
 
