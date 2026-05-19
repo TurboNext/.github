@@ -1,3 +1,6 @@
+const conventionalCommitRegex =
+  /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9_-]+\))?!?: .+$/;
+
 async function extractGithubIssueReferences(body, keywords, github, context, repo) {
 // match keywords followed by #issue_number, case insensitive
   const keywordsPattern = keywords.join("|");
@@ -74,11 +77,25 @@ async function getClosingIssueReferences(github, context) {
 async function validatePr ({ github, context, core }) {
     const pr = context.payload.pull_request;
     const body = (pr.body || "").trim();
+    const title = pr.title;
     const labels = pr.labels.map(label => label.name);
     const githubKeywords = ["close", "closes", "closed", "fix", "fixes", "fixed", "resolve", "resolves", "resolved"];
     const turbonextKeywords = ["ref", "refs", "reference", "references", "follow-up"];
+
     if (!body) {
         core.setFailed("❌ PR description must not be empty.");
+    }
+
+    if (!conventionalCommitRegex.test(title)) {
+        core.setFailed(`
+            "❌ Invalid PR title.\n\n" +
+            "Expected format:\n" +
+            "type(scope[optional]): description\n\n" +
+            "Examples:\n" +
+            "feat(model split): added Q\n" +
+            "fix(api): prevent duplicate orders\n" +
+            "chore(ci): update workflows"
+        `);
     }
 
     if (labels.includes("Cleanup")) {
