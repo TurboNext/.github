@@ -1,5 +1,5 @@
 const conventionalCommitRegex =
-  /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([A-Za-z0-9_-]+\))?!?: .+$/;
+  /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([A-Za-z0-9_ -]+\))?!?: .+$/;
 
 async function extractGithubIssueReferences(body, keywords, github, context, repo) {
 // match keywords followed by #issue_number, case insensitive
