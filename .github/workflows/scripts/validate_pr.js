@@ -1,80 +1,43 @@
 const conventionalCommitRegex =
   /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([A-Za-z0-9_ -]+\))?!?: .+$/;
 
-async function extractGithubIssueReferences(body, keywords, github, context) {
-  const matches = [];
-
-  // Supports:
-  //   fixes #123
-  //   fixes repo#123
-  //   fixes org/repo#123
-  //
-  // Capture groups:
-  //   1 = keyword
-  //   2 = optional repo or org/repo
-  //   3 = issue number
-
+async function extractGithubIssueReferences(body, keywords, github, context, repo) {
+// match keywords followed by #issue_number, case insensitive
   const keywordsPattern = keywords.join("|");
+  const regex = new RegExp(`\\b(${keywordsPattern})\\s+#(\\d+)`, "gi");
 
-  const regex = new RegExp(
-    `\\b(${keywordsPattern})\\s+((?:[A-Za-z0-9_.-]+\\/)?[A-Za-z0-9_.-]+)?#(\\d+)`,
-    "gi"
-  );
-
+  const matches = [];
   let match;
+  if (repo == null){
+      repo = context.repo.repo
+  }
 
   while ((match = regex.exec(body)) !== null) {
-    const keyword = match[1].toLowerCase();
-    const repoRef = match[2];
-    const issueNumber = Number(match[3]);
-
-    let owner = context.repo.owner;
-    let repo = context.repo.repo;
-
-    // Handle:
-    //   repo#123
-    //   org/repo#123
-    if (repoRef) {
-      if (repoRef.includes("/")) {
-        [owner, repo] = repoRef.split("/");
-
-        // Enforce same organization only
-        if (owner !== context.repo.owner) {
-          throw new Error(
-            `❌ Cross-organization issue reference is not allowed: ${owner}/${repo}#${issueNumber}`
-          );
-        }
-      } else {
-        // repo#123 -> same organization
-        repo = repoRef;
-      }
-    }
+    const issueNumber = Number(match[2]);
+    console.log(issueNumber)
 
     try {
+      // Check if the issue exists in the repository
       const { data: issue } = await github.rest.issues.get({
-        owner,
-        repo,
-        issue_number: issueNumber,
+        owner: context.repo.owner,
+        repo: repo,
+        issue_number: issueNumber
       });
+      console.log(issue)
 
-      // Ignore pull requests
-      if (!("pull_request" in issue)) {
-        matches.push({
-          keyword,
-          issue: issueNumber,
-          owner,
-          repo,
-          url: issue.html_url,
-        });
-      } else {
-        console.warn(
-          `${owner}/${repo}#${issueNumber} is a PR, not an issue`
-        );
+      if (!('pull_request' in issue)) {
+          matches.push({
+            keyword: match[1].toLowerCase(),
+            issue: issueNumber,
+            url: issue.html_url
+          });
       }
+      else{
+        console.warn(`Issue #${issueNumber} is a PR.`)
+      }
+
     } catch (error) {
-      console.warn(
-        `Issue not found: ${owner}/${repo}#${issueNumber}`
-      );
+      console.warn(`Issue #${issueNumber} not found in ${context.repo.owner}/${context.repo.repo}`);
     }
   }
 
@@ -82,104 +45,61 @@ async function extractGithubIssueReferences(body, keywords, github, context) {
 }
 
 async function getClosingIssueReferences(github, context) {
-  const query = `
-    query($owner: String!, $repo: String!, $pr: Int!) {
-      repository(owner: $owner, name: $repo) {
-        pullRequest(number: $pr) {
-          closingIssuesReferences(first: 20) {
-            nodes {
-              number
-              url
-              repository {
-                name
-                owner {
-                  login
+    const query = `
+            query($owner: String!, $repo: String!, $pr: Int!) {
+            repository(owner: $owner, name: $repo) {
+                pullRequest(number: $pr) {
+                closingIssuesReferences(first: 10) {
+                    nodes {
+                        number
+                        url
+                        labels(first: 10) {
+                            nodes {
+                             name
+                            }
+                        }
+                    }
                 }
-              }
-              labels(first: 10) {
-                nodes {
-                  name
                 }
-              }
             }
-          }
-        }
-      }
-    }
-  `;
+            }
+        `;
 
-  const result = await github.graphql(query, {
-    owner: context.repo.owner,
-    repo: context.repo.repo,
-    pr: context.issue.number,
-  });
+        const result = await github.graphql(query, {
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pr: context.issue.number,
+        });
 
-  const issues =
-    result.repository.pullRequest.closingIssuesReferences.nodes;
-
-  // Enforce same-organization closing references
-  for (const issue of issues) {
-    const owner = issue.repository.owner.login;
-
-    if (owner !== context.repo.owner) {
-      throw new Error(
-        `❌ Cross-organization closing reference is not allowed: ${owner}/${issue.repository.name}#${issue.number}`
-      );
-    }
-  }
-
-  return issues;
+    return result.repository.pullRequest.closingIssuesReferences.nodes;
 }
 
-async function validatePr({ github, context, core }) {
-  try {
+async function validatePr ({ github, context, core }) {
     const pr = context.payload.pull_request;
     const body = (pr.body || "").trim();
     const title = pr.title;
-    const labels = pr.labels.map((label) => label.name);
-
-    const githubKeywords = [
-      "close",
-      "closes",
-      "closed",
-      "fix",
-      "fixes",
-      "fixed",
-      "resolve",
-      "resolves",
-      "resolved",
-    ];
-
-    const referenceKeywords = [
-      "ref",
-      "refs",
-      "reference",
-      "references",
-      "follow-up",
-    ];
+    const labels = pr.labels.map(label => label.name);
+    const githubKeywords = ["close", "closes", "closed", "fix", "fixes", "fixed", "resolve", "resolves", "resolved"];
+    const turbonextKeywords = ["ref", "refs", "reference", "references", "follow-up"];
 
     if (!body) {
-      core.setFailed("❌ PR description must not be empty.");
-      return;
+        core.setFailed("❌ PR description must not be empty.");
     }
 
     if (!conventionalCommitRegex.test(title)) {
-      core.setFailed(`
+        core.setFailed(`
             "❌ Invalid PR title.\n\n" +
             "Expected format:\n" +
             "type(scope[optional]): description\n\n" +
             "Examples:\n" +
             "feat(model split): added Qwen split\n" +
             "fix(data parallel): prevents serving from crashing when dp > 4\n" +
-      `);
-      return;
+        `);
     }
 
     if (labels.includes("Cleanup")) {
-      console.log(
-        "⚠️ PR is marked as 'Cleanup', skipping further checks."
-      );
-      return;
+        console.log("⚠️ PR is marked as 'Cleanup', skipping further checks.");
+        return;
     }
 
     if (labels.includes("Cross-repository")) {
@@ -189,32 +109,15 @@ async function validatePr({ github, context, core }) {
 
     if (labels.includes("github_actions")) {
         console.log("⚠️ PR updates GitHub Actions code, probably by bot. Skipping further checks.");
-      return;
+        return;
     }
 
-    const githubIssueRefs =
-      await extractGithubIssueReferences(
-        body,
-        githubKeywords,
-        github,
-        context
-      );
+    const githubIssueRefs = await extractGithubIssueReferences(body, githubKeywords, github, context, null);
+    const turbonextIssueRefs = await extractGithubIssueReferences(body, turbonextKeywords, github, context, null);
+    const oldRepoIssueRefs = await extractGithubIssueReferences(body, githubKeywords, github, context, "vllm-tn");
+    const allIssueRefs = [...githubIssueRefs, ...turbonextIssueRefs, ...oldRepoIssueRefs];
 
-    const referenceIssueRefs =
-      await extractGithubIssueReferences(
-        body,
-        referenceKeywords,
-        github,
-        context
-      );
-
-    const allIssueRefs = [
-      ...githubIssueRefs,
-      ...referenceIssueRefs,
-    ];
-
-    const linkedIssues =
-      await getClosingIssueReferences(github, context);
+    const linkedIssues = await getClosingIssueReferences(github, context);
 
     if (linkedIssues.length + allIssueRefs.length === 0) {
         core.setFailed("❌ PR must reference an issue or be marked up as Cleanup. Use github keywords to also close issue (close, fix, resolve). Use turbonext keywords to reference without closing (ref, reference, follow-up).");
