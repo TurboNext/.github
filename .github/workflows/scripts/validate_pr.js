@@ -4,74 +4,154 @@ const conventionalCommitRegex =
 async function extractGithubIssueReferences(body, keywords, github, context, repo) {
 // match keywords followed by #issue_number, case insensitive
   const keywordsPattern = keywords.join("|");
-  const regex = new RegExp(`\\b(${keywordsPattern})\\s+#(\\d+)`, "gi");
 
-  const matches = [];
-  let match;
-  if (repo == null){
-      repo = context.repo.repo
-  }
+  const keywordRegex = new RegExp(
+    `\\b(${keywordsPattern})\\s+((?:[A-Za-z0-9_.-]+\\/)?[A-Za-z0-9_.-]+)?#(\\d+)`,
+    "gi"
+  );
 
-  while ((match = regex.exec(body)) !== null) {
-    const issueNumber = Number(match[2]);
-    console.log(issueNumber)
+  const urlRegex =
+    /https:\/\/github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)\/issues\/(\d+)/gi;
+
+  async function validateAndStore({
+    keyword = "link",
+    owner,
+    repo,
+    issueNumber,
+  }) {
+    // Enforce same organization only
+    if (owner !== context.repo.owner) {
+      throw new Error(
+        `❌ Cross-organization issue reference is not allowed: ${owner}/${repo}#${issueNumber}`
+      );
+    }
+
+    const dedupeKey = `${owner}/${repo}#${issueNumber}`;
+
+    if (seen.has(dedupeKey)) {
+      return;
+    }
+
+    seen.add(dedupeKey);
 
     try {
-      // Check if the issue exists in the repository
       const { data: issue } = await github.rest.issues.get({
-        owner: context.repo.owner,
-        repo: repo,
-        issue_number: issueNumber
+        owner,
+        repo,
+        issue_number: issueNumber,
       });
-      console.log(issue)
 
-      if (!('pull_request' in issue)) {
-          matches.push({
-            keyword: match[1].toLowerCase(),
-            issue: issueNumber,
-            url: issue.html_url
-          });
+      // Ignore pull requests
+      if (!("pull_request" in issue)) {
+        matches.push({
+          keyword,
+          issue: issueNumber,
+          owner,
+          repo,
+          url: issue.html_url,
+        });
+      } else {
+        console.warn(
+          `${owner}/${repo}#${issueNumber} is a PR, not an issue`
+        );
       }
-      else{
-        console.warn(`Issue #${issueNumber} is a PR.`)
-      }
-
     } catch (error) {
-      console.warn(`Issue #${issueNumber} not found in ${context.repo.owner}/${context.repo.repo}`);
+      console.warn(
+        `Issue not found: ${owner}/${repo}#${issueNumber}`
+      );
     }
+  }
+
+  //
+  // Parse keyword references
+  //
+  let match;
+
+  while ((match = keywordRegex.exec(body)) !== null) {
+    const keyword = match[1].toLowerCase();
+    const repoRef = match[2];
+    const issueNumber = Number(match[3]);
+
+    let owner = context.repo.owner;
+    let repo = context.repo.repo;
+
+    if (repoRef) {
+      if (repoRef.includes("/")) {
+        [owner, repo] = repoRef.split("/");
+      } else {
+        repo = repoRef;
+      }
+    }
+
+    await validateAndStore({
+      keyword,
+      owner,
+      repo,
+      issueNumber,
+    });
+  }
+
+  //
+  // Parse direct GitHub issue URLs
+  //
+  while ((match = urlRegex.exec(body)) !== null) {
+    const owner = match[1];
+    const repo = match[2];
+    const issueNumber = Number(match[3]);
+
+    await validateAndStore({
+      keyword: "link",
+      owner,
+      repo,
+      issueNumber,
+    });
   }
 
   return matches;
 }
 
 async function getClosingIssueReferences(github, context) {
-    const query = `
-            query($owner: String!, $repo: String!, $pr: Int!) {
-            repository(owner: $owner, name: $repo) {
-                pullRequest(number: $pr) {
-                closingIssuesReferences(first: 10) {
-                    nodes {
-                        number
-                        url
-                        labels(first: 10) {
-                            nodes {
-                             name
-                            }
-                        }
-                    }
+  const query = `
+    query($owner: String!, $repo: String!, $pr: Int!) {
+      repository(owner: $owner, name: $repo) {
+        pullRequest(number: $pr) {
+        closingIssuesReferences(first: 10) {
+            nodes {
+              number
+              url
+              labels(first: 10) {
+                nodes {
+                  name
                 }
-                }
+              }
             }
-            }
-        `;
+          }
+        }
+      }
+    }
+  `;
 
-        const result = await github.graphql(query, {
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            pr: context.issue.number,
-        });
+  const result = await github.graphql(query, {
+    owner: context.repo.owner,
+    repo: context.repo.repo,
+    pr: context.issue.number,
+  });
 
-    return result.repository.pullRequest.closingIssuesReferences.nodes;
+  const issues =
+    result.repository.pullRequest.closingIssuesReferences.nodes;
+
+  // Enforce same-organization references
+  for (const issue of issues) {
+    const owner = issue.repository.owner.login;
+
+    if (owner !== context.repo.owner) {
+      throw new Error(
+        `❌ Cross-organization closing reference is not allowed: ${owner}/${issue.repository.name}#${issue.number}`
+      );
+    }
+  }
+
+  return issues;
 }
 
 async function validatePr ({ github, context, core }) {
@@ -83,33 +163,34 @@ async function validatePr ({ github, context, core }) {
     const turbonextKeywords = ["ref", "refs", "reference", "references", "follow-up"];
 
     if (!body) {
-        core.setFailed("❌ PR description must not be empty.");
+      core.setFailed("❌ PR description must not be empty.");
+      return;
     }
 
     if (!conventionalCommitRegex.test(title)) {
-        core.setFailed(`
+      core.setFailed(`
             "❌ Invalid PR title.\n\n" +
             "Expected format:\n" +
             "type(scope[optional]): description\n\n" +
             "Examples:\n" +
             "feat(model split): added Qwen split\n" +
             "fix(data parallel): prevents serving from crashing when dp > 4\n" +
-        `);
+      `);
     }
 
     if (labels.includes("Cleanup")) {
         console.log("⚠️ PR is marked as 'Cleanup', skipping further checks.");
-        return;
+      return;
     }
 
     if (labels.includes("Cross-repository")) {
         console.log("⚠️ PR is marked as 'Cross-repository', skipping further checks.");
-        return;
+      return;
     }
 
     if (labels.includes("github_actions")) {
         console.log("⚠️ PR updates GitHub Actions code, probably by bot. Skipping further checks.");
-        return;
+      return;
     }
 
     const githubIssueRefs = await extractGithubIssueReferences(body, githubKeywords, github, context, null);
