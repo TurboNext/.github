@@ -8,51 +8,50 @@ async function extractGithubIssueReferences(
   context
 ) {
   const matches = [];
+  const seen = new Set();
 
+  //
   // Supports:
+  //
+  // Keyword references:
   //   fixes #123
   //   fixes repo#123
   //   fixes org/repo#123
   //
-  // Capture groups:
-  //   1 = keyword
-  //   2 = optional repo or org/repo
-  //   3 = issue number
+  // Direct GitHub issue URLs:
+  //   https://github.com/org/repo/issues/123
+  //
+
   const keywordsPattern = keywords.join("|");
 
-  const regex = new RegExp(
+  const keywordRegex = new RegExp(
     `\\b(${keywordsPattern})\\s+((?:[A-Za-z0-9_.-]+\\/)?[A-Za-z0-9_.-]+)?#(\\d+)`,
     "gi"
   );
 
-  let match;
+  const urlRegex =
+    /https:\/\/github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)\/issues\/(\d+)/gi;
 
-  while ((match = regex.exec(body)) !== null) {
-    const keyword = match[1].toLowerCase();
-    const repoRef = match[2];
-    const issueNumber = Number(match[3]);
-
-    let owner = context.repo.owner;
-    let repo = context.repo.repo;
-
-    // Handle:
-    //   repo#123
-    //   org/repo#123
-    if (repoRef) {
-      if (repoRef.includes("/")) {
-        [owner, repo] = repoRef.split("/");
-
-        // Enforce same organization only
-        if (owner !== context.repo.owner) {
-          throw new Error(
-            `❌ Cross-organization issue reference is not allowed: ${owner}/${repo}#${issueNumber}`
-          );
-        }
-      } else {
-        // repo#123 -> same organization
-        repo = repoRef;
-      }
+  async function validateAndStore({
+    keyword = "link",
+    owner,
+    repo,
+    issueNumber,
+  }) {
+    // Enforce same organization only
+    if (owner !== context.repo.owner) {
+      throw new Error(
+        `❌ Cross-organization issue reference is not allowed: ${owner}/${repo}#${issueNumber}`
+      );
     }
+
+    const dedupeKey = `${owner}/${repo}#${issueNumber}`;
+
+    if (seen.has(dedupeKey)) {
+      return;
+    }
+
+    seen.add(dedupeKey);
 
     try {
       const { data: issue } = await github.rest.issues.get({
@@ -80,6 +79,51 @@ async function extractGithubIssueReferences(
         `Issue not found: ${owner}/${repo}#${issueNumber}`
       );
     }
+  }
+
+  //
+  // Parse keyword references
+  //
+  let match;
+
+  while ((match = keywordRegex.exec(body)) !== null) {
+    const keyword = match[1].toLowerCase();
+    const repoRef = match[2];
+    const issueNumber = Number(match[3]);
+
+    let owner = context.repo.owner;
+    let repo = context.repo.repo;
+
+    if (repoRef) {
+      if (repoRef.includes("/")) {
+        [owner, repo] = repoRef.split("/");
+      } else {
+        repo = repoRef;
+      }
+    }
+
+    await validateAndStore({
+      keyword,
+      owner,
+      repo,
+      issueNumber,
+    });
+  }
+
+  //
+  // Parse direct GitHub issue URLs
+  //
+  while ((match = urlRegex.exec(body)) !== null) {
+    const owner = match[1];
+    const repo = match[2];
+    const issueNumber = Number(match[3]);
+
+    await validateAndStore({
+      keyword: "link",
+      owner,
+      repo,
+      issueNumber,
+    });
   }
 
   return matches;
@@ -238,8 +282,15 @@ Use reference keywords for non-closing references:
 
 Examples:
   fixes #123
-  fixes backend#456
-  refs platform/api#789
+  fixes tllm-lugins#456
+  fixes TurboNext/tllm-plugins#789
+
+Non-closing references:
+  refs #123
+  follow-up backend#456
+
+Direct links:
+  https://github.com/TurboNext/tllm-plugins/issues/123
       `);
 
       return;
