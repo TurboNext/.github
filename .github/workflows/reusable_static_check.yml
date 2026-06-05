@@ -1,0 +1,89 @@
+name: Static Checks
+on:
+  workflow_call:
+
+jobs:
+  mypy-check:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    name: Mypy Type Check
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@v6.2.0
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install mypy
+
+      - name: Check types with Mypy
+        id: check-types
+        run: mypy --exclude tests --explicit-package-bases .
+
+  pylint-check:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    name: Pylint Static Code Analysis
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@v6.2.0
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install mypy
+          pip install pylint==3.3.8
+
+      - name: Analyze code with Pylint
+        id: analyze-code
+        run: |
+          # Disable pylint errors that we don't care about
+          # Run pylint on (package, tests and examples dirs) to give it more context and remove some redundant errors
+          disable_errors="C0415, R0913, R0917"
+          pylint_score=$(pylint --disable="$disable_errors" tllm_plugins tools | grep 'rated at' | awk '{print $7}' | cut -d'/' -f1)
+          echo "PYLINT_SCORE=$pylint_score" >> "$GITHUB_ENV"
+
+      - name: Check Pylint score
+        run: |
+          if (( $(echo "$PYLINT_SCORE < 8" | bc -l) )); then
+            echo "Failure: Pylint score is below 8 (project score: $PYLINT_SCORE)."
+            exit 1
+          else
+            echo "Success: Pylint score is above 8 (project score: $PYLINT_SCORE)."
+          fi
+
+  ruff-check:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Install Python
+        uses: actions/setup-python@v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+
+      - name: Run Ruff
+        run: ruff check --output-format=github .
