@@ -1,0 +1,62 @@
+default_stages:
+  - pre-commit # Run locally
+  - manual # Run in CI
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v6.0.0
+  hooks:
+  -   id: trailing-whitespace
+  -   id: check-yaml
+  -   id: check-toml
+- repo: https://github.com/astral-sh/uv-pre-commit
+  # uv version.
+  rev: 0.8.18
+  hooks:
+    - id: uv-lock
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.9.3
+  hooks:
+  - id: ruff
+    args: [--fix]
+  - id: ruff-format
+- repo: https://github.com/codespell-project/codespell
+  rev: v2.4.0
+  hooks:
+  - id: codespell
+    exclude: 'benchmarks/sonnet.txt|(build|tests/(lora/data|models/fixtures|prompts))/.*'
+- repo: https://github.com/jackdewinter/pymarkdown
+  rev: v0.9.27
+  hooks:
+  - id: pymarkdown
+    files: docs/.*
+- repo: https://github.com/rhysd/actionlint
+  rev: v1.7.7
+  hooks:
+  - id: actionlint
+    exclude: ^\.github/workflows/turbonext/config/
+- repo: https://github.com/pre-commit/mirrors-mypy
+  rev: v1.10.0  # Use the latest version
+  hooks:
+  - id: mypy
+    args: [--config-file=pyproject.toml]
+    additional_dependencies: [types-requests, types-setuptools]
+- repo: local
+  hooks:
+  - id: signoff-commit
+    name: Sign-off Commit
+    entry: bash
+    args:
+      - -c
+      - |
+        if ! grep -q "^Signed-off-by: $(git config user.name) <$(git config user.email)>" .git/COMMIT_EDITMSG; then
+          printf "\nSigned-off-by: $(git config user.name) <$(git config user.email)>\n" >> .git/COMMIT_EDITMSG
+        fi
+    language: system
+    verbose: true
+    stages: [commit-msg]
+  - id: suggestion
+    name: Suggestion
+    entry: bash -c 'echo "To bypass pre-commit hooks, add --no-verify to git commit."'
+    language: system
+    verbose: true
+    pass_filenames: false

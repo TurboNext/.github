@@ -1,0 +1,12 @@
+name: Pre-commit Check
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize]
+  workflow_dispatch:
+
+jobs:
+  call-workflow:
+    uses: TurboNext/.github/.github/workflows/reusable_pre-commit-check.yml@main
+    secrets:
+      GHP_TOKEN: ${{ secrets.GHP_TOKEN }}
