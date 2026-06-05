@@ -1,0 +1,42 @@
+name: Pre-commit Check
+
+on:
+  workflow_call:
+    secrets:
+      GHP_TOKEN:
+        required: false
+
+jobs:
+  pre-commit:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6.0.2
+      with:
+        fetch-depth: 0
+    
+    - name: Checkout repository
+      uses: actions/checkout@v6.0.2
+      with:
+        repository: TurboNext/.github
+        path: shared-repo
+
+    - name: Set up Python
+      uses: actions/setup-python@v6.2.0
+      with:
+        python-version: '3.12'
+
+    - name: Authenticate private GitHub dependency fetches
+      env:
+        GITHUB_TOKEN: ${{ secrets.GHP_TOKEN }}
+      run: git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+
+    - uses: pre-commit/action@v3.0.1
+      with:
+         extra_args: >
+          --config shared-repo/.pre-commit-config.yaml
+          --all-files 
+          --hook-stage manual 
+          --from-ref ${{ github.event.pull_request.base.sha }} 
+          --to-ref ${{ github.event.pull_request.head.sha }}
