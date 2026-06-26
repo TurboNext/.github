@@ -22,7 +22,7 @@ on:
 permissions:
   pull-requests: write
   issues: write
-  contents: write # write is needed for committable "Apply suggestion"
+  contents: write
 
 jobs:
   pr_agent_review:
