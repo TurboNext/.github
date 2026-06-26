@@ -1,0 +1,49 @@
+name: Reusable PR Agent review workflow
+
+on:
+  workflow_call:
+    inputs:
+      model:
+        description: "LiteLLM model alias (bare, without openai/ prefix)"
+        required: false
+        type: string
+        default: ""        # falls back to the PR_AGENT_MODEL org variable below
+      pr_agent_version:
+        description: "Pinned PR-Agent action tag"
+        required: false
+        type: string
+        default: "v0.37.0"
+    secrets:
+      LITELLM_API_BASE:
+        required: true
+      LITELLM_VIRTUAL_KEY:
+        required: true
+
+permissions:
+  pull-requests: write
+  issues: write
+  contents: write # write is needed for committable "Apply suggestion"
+
+jobs:
+  pr_agent_review:
+    name: PR Agent review
+    runs-on: ubuntu-latest
+    steps:
+      - name: PR Agent action step
+        id: pragent
+        uses: the-pr-agent/pr-agent@${{ inputs.pr_agent_version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI.KEY: ${{ secrets.LITELLM_VIRTUAL_KEY }}
+          OPENAI.API_BASE: ${{ secrets.LITELLM_API_BASE }}
+
+          config.model: "openai/${{ inputs.model != '' && inputs.model || vars.PR_AGENT_MODEL }}"
+          # ZDR safety: fallback is locked to the same proxy alias
+          config.fallback_models: '["openai/${{ inputs.model != '' && inputs.model || vars.PR_AGENT_MODEL }}"]'
+          config.custom_model_max_tokens: "1048576"
+
+          github_action_config.auto_review: "true"
+          github_action_config.auto_describe: "false"
+          github_action_config.auto_improve: "true"
+          github_action_config.pr_actions: '["labeled"]'
+          pr_code_suggestions.commitable_code_suggestions: "true"
