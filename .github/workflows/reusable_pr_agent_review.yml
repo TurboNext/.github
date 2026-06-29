@@ -29,7 +29,7 @@ jobs:
           config.model: "openai/${{ vars.PR_AGENT_MODEL }}"
           # ZDR safety: fallback locked to the same proxy alias
           config.fallback_models: '["openai/${{ vars.PR_AGENT_MODEL }}"]'
-          config.custom_model_max_tokens: "1048576"
+          config.custom_model_max_tokens: "300000"
 
           github_action_config.auto_review: "true"
           github_action_config.auto_describe: "false"
