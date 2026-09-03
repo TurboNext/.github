@@ -1,0 +1,73 @@
+name: Reusable PyPI Publish (Artifact Registry)
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+        description: 'AR Python repository id (pypi-tn, pypi-tn-cu129, pypi-tn-cu130).'
+        required: false
+        type: string
+        default: 'pypi-tn'
+      project:
+        description: 'GCP project hosting the AR repository.'
+        required: false
+        type: string
+        default: 'turbonext-first-project'
+      location:
+        description: 'GCP region hosting the AR repository.'
+        required: false
+        type: string
+        default: 'europe-west1'
+      python-version:
+        required: false
+        type: string
+        default: '3.12'
+      working-directory:
+        required: false
+        type: string
+        default: '.'
+      build-command:
+        description: 'Command that produces dist/* before upload.'
+        required: false
+        type: string
+        default: 'python -m build'
+    secrets:
+      PYPI_TN_PUBLISHER_KEY:
+        description: 'pypi-tn publisher service account JSON key.'
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@v7.0.0
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Build
+        run: ${{ inputs.build-command }}
+
+      - name: Mint Artifact Registry token
+        id: ar-token
+        uses: TurboNext/.github/.github/actions/ar-python-token@main
+        with:
+          gcp-sa-key: ${{ secrets.PYPI_TN_PUBLISHER_KEY }}
+          repository: ${{ inputs.repository }}
+          project: ${{ inputs.project }}
+          location: ${{ inputs.location }}
+
+      - name: Upload with twine
+        run: |
+          pip install twine
+          twine upload \
+            -u oauth2accesstoken \
+            -p "${{ steps.ar-token.outputs.token }}" \
+            --repository-url https://${{ inputs.location }}-python.pkg.dev/${{ inputs.project }}/${{ inputs.repository }}/ \
+            dist/*

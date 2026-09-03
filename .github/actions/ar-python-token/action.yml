@@ -1,0 +1,50 @@
+name: 'AR Python Token'
+description: >-
+  Mint a short-lived OAuth2 access token for the pypi-tn GCP Artifact
+  Registry Python repositories, and assemble the matching pip/twine 
+  index URL.
+
+inputs:
+  gcp-sa-key:
+    description: >-
+      pypi-tn publisher or reader service account JSON key.
+    required: true
+  repository:
+    description: 'AR Python repository id (pypi-tn, pypi-tn-cu129, pypi-tn-cu130).'
+    required: false
+    default: 'pypi-tn'
+  project:
+    description: 'GCP project hosting the AR repository.'
+    required: false
+    default: 'turbonext-first-project'
+  location:
+    description: 'GCP region hosting the AR repository.'
+    required: false
+    default: 'europe-west1'
+
+outputs:
+  token:
+    description: 'Short-lived OAuth2 access token.'
+    value: ${{ steps.auth.outputs.access_token }}
+  index-url:
+    description: >-
+      Pre-assembled index URL with the token embedded as the
+      oauth2accesstoken basic-auth password, for pip/twine/uv
+      --extra-index-url or --repository-url use.
+    value: ${{ steps.index-url.outputs.index-url }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: auth
+      uses: google-github-actions/auth@v3.0.0
+      with:
+        credentials_json: ${{ inputs.gcp-sa-key }}
+        token_format: 'access_token'
+
+    - id: index-url
+      shell: bash
+      run: |
+        TOKEN="${{ steps.auth.outputs.access_token }}"
+        echo "::add-mask::$TOKEN"
+        echo "index-url=https://oauth2accesstoken:${TOKEN}@${{ inputs.location }}-python.pkg.dev/${{ inputs.project }}/${{ inputs.repository }}/simple/" >> "$GITHUB_OUTPUT"
