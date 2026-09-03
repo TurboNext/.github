@@ -1,0 +1,11 @@
+[project]
+name = "turbonext-ar-smoke-test"
+version = "0.0.0"
+description = "Throwaway package for CI smoke-testing pypi-tn Artifact Registry auth (publish + install). Not a real dependency."
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["ar_smoke_test"]
