@@ -51,12 +51,15 @@ jobs:
         with:
           python-version: ${{ inputs.python-version }}
 
+      - name: Install default build backend
+        run: pip install --upgrade build
+
       - name: Build
         run: ${{ inputs.build-command }}
 
       - name: Mint Artifact Registry token
         id: ar-token
-        uses: TurboNext/.github/.github/actions/ar-python-token@main
+        uses: $/.github/actions/ar-python-token
         with:
           gcp-sa-key: ${{ secrets.PYPI_TN_PUBLISHER_KEY }}
           repository: ${{ inputs.repository }}
