@@ -25,7 +25,7 @@ inputs:
 outputs:
   token:
     description: 'Short-lived OAuth2 access token.'
-    value: ${{ steps.auth.outputs.access_token }}
+    value: ${{ steps.index-url.outputs.token }}
   index-url:
     description: >-
       Pre-assembled index URL with the token embedded as the
@@ -40,11 +40,11 @@ runs:
       uses: google-github-actions/auth@v3.0.0
       with:
         credentials_json: ${{ inputs.gcp-sa-key }}
-        token_format: 'access_token'
 
     - id: index-url
       shell: bash
       run: |
-        TOKEN="${{ steps.auth.outputs.access_token }}"
+        TOKEN="$(gcloud auth print-access-token)"
         echo "::add-mask::$TOKEN"
+        echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
         echo "index-url=https://oauth2accesstoken:${TOKEN}@${{ inputs.location }}-python.pkg.dev/${{ inputs.project }}/${{ inputs.repository }}/simple/" >> "$GITHUB_OUTPUT"
