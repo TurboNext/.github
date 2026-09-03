@@ -1,7 +1,7 @@
 name: 'AR Python Token'
 description: >-
   Mint a short-lived OAuth2 access token for the pypi-tn GCP Artifact
-  Registry Python repositories, and assemble the matching pip/twine 
+  Registry Python repositories, and assemble the matching pip/twine
   index URL.
 
 inputs:

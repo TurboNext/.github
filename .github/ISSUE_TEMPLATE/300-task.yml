@@ -28,7 +28,7 @@ body:
     label: Definition of Done
     description: >
       Clearly define when this feature is considered done. You can use provided template or modify it as needed.
-    placeholder: |  
+    placeholder: |
       - [ ] user story was merged to main branch
       - [ ] tests for this user story were added and passed
       - [ ] logging for this user story was added

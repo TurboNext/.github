@@ -15,7 +15,7 @@ jobs:
       uses: actions/checkout@v6.0.2
       with:
         fetch-depth: 0
-    
+
     - name: Checkout repository
       uses: actions/checkout@v6.0.2
       with:
@@ -36,7 +36,7 @@ jobs:
       with:
          extra_args: >
           --config shared-repo/.pre-commit-config.yaml
-          --all-files 
-          --hook-stage manual 
-          --from-ref ${{ github.event.pull_request.base.sha }} 
+          --all-files
+          --hook-stage manual
+          --from-ref ${{ github.event.pull_request.base.sha }}
           --to-ref ${{ github.event.pull_request.head.sha }}
