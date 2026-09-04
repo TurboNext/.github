@@ -59,7 +59,7 @@ jobs:
 
       - name: Mint Artifact Registry token
         id: ar-token
-        uses: TurboNext/.github/.github/actions/ar-python-token@main
+        uses: TurboNext/.github/.github/actions/ar-python-token@artemk/reusable-ar-workflows
         with:
           gcp-sa-key: ${{ secrets.PYPI_TN_PUBLISHER_KEY }}
           repository: ${{ inputs.repository }}
