@@ -3,8 +3,6 @@ name: Reusable PR Agent
 on:
   workflow_call:
     secrets:
-      LITELLM_API_BASE:
-        required: true
       LITELLM_VIRTUAL_KEY:
         required: true
 
@@ -24,7 +22,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI.KEY: ${{ secrets.LITELLM_VIRTUAL_KEY }}
-          OPENAI.API_BASE: ${{ secrets.LITELLM_API_BASE }}
+          OPENAI.API_BASE: ${{ vars.LITELLM_API_BASE }}
 
           config.model: "openai/${{ vars.PR_AGENT_MODEL }}"
           # ZDR safety: fallback locked to the same proxy alias
