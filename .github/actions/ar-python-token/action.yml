@@ -10,9 +10,18 @@ inputs:
       pypi-tn publisher or reader service account JSON key.
     required: true
   repository:
-    description: 'AR Python repository id (pypi-tn, pypi-tn-cu129, pypi-tn-cu130).'
+    description: >-
+      AR Python repository id (pypi-tn, pypi-tn-cu129, pypi-tn-cu130).
+      Ignored if channel is set.
     required: false
     default: 'pypi-tn'
+  channel:
+    description: >-
+      Convenience alternative to repository: TurboNext's devpi-era channel
+      name (cu129, cu130; anything else, including stable/simple/empty,
+      resolves to pypi-tn). Takes precedence over repository when set.
+    required: false
+    default: ''
   project:
     description: 'GCP project hosting the AR repository.'
     required: false
@@ -32,6 +41,9 @@ outputs:
       oauth2accesstoken basic-auth password, for pip/twine/uv
       --extra-index-url or --repository-url use.
     value: ${{ steps.index-url.outputs.index-url }}
+  repository:
+    description: 'The AR repository id actually used (resolved from channel if set).'
+    value: ${{ steps.resolve.outputs.repository }}
 
 runs:
   using: 'composite'
@@ -43,10 +55,24 @@ runs:
       with:
         credentials_json: ${{ inputs.gcp-sa-key }}
 
+    - id: resolve
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.channel }}" ]; then
+          case "${{ inputs.channel }}" in
+            cu129) REPOSITORY=pypi-tn-cu129 ;;
+            cu130) REPOSITORY=pypi-tn-cu130 ;;
+            *)     REPOSITORY=pypi-tn ;;
+          esac
+        else
+          REPOSITORY="${{ inputs.repository }}"
+        fi
+        echo "repository=$REPOSITORY" >> "$GITHUB_OUTPUT"
+
     - id: index-url
       shell: bash
       run: |
         TOKEN="$(gcloud auth print-access-token)"
         echo "::add-mask::$TOKEN"
         echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
-        echo "index-url=https://oauth2accesstoken:${TOKEN}@${{ inputs.location }}-python.pkg.dev/${{ inputs.project }}/${{ inputs.repository }}/simple/" >> "$GITHUB_OUTPUT"
+        echo "index-url=https://oauth2accesstoken:${TOKEN}@${{ inputs.location }}-python.pkg.dev/${{ inputs.project }}/${{ steps.resolve.outputs.repository }}/simple/" >> "$GITHUB_OUTPUT"
