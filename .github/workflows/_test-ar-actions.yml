@@ -1,0 +1,81 @@
+name: TEST ar-python-publish/install (throwaway, remove before merge)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - artemk/reusable-ar-workflows
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Build disposable fixture package
+        run: |
+          set -eux
+          mkdir -p /tmp/fixture/ar_actions_smoke_test
+          VERSION="0.0.0.dev$(date +%s)"
+          echo "FIXTURE_VERSION=${VERSION}" >> "$GITHUB_ENV"
+          cat > /tmp/fixture/pyproject.toml <<EOF
+          [build-system]
+          requires = ["setuptools>=61"]
+          build-backend = "setuptools.build_meta"
+
+          [project]
+          name = "ar-actions-smoke-test"
+          version = "${VERSION}"
+          EOF
+          echo "print('hello from ar-actions-smoke-test')" > /tmp/fixture/ar_actions_smoke_test/__init__.py
+          cd /tmp/fixture
+          python -m pip install --quiet build
+          python -m build
+
+      # PENDING: TurboNext/.github#25 not yet merged to main, repoint at @main once it does
+      - name: Publish to cu129, also to stable
+        uses: ./.github/actions/ar-python-publish
+        with:
+          gcp-sa-key: ${{ secrets.PYPI_TN_PUBLISHER_KEY }}
+          dist-glob: /tmp/fixture/dist/*
+          channel: cu129
+          also-channel: stable
+
+      # PENDING: TurboNext/.github#25 not yet merged to main, repoint at @main once it does
+      - name: Install from cu129
+        uses: ./.github/actions/ar-python-install
+        with:
+          gcp-sa-key: ${{ secrets.PYPI_TN_READER_KEY }}
+          package: ar-actions-smoke-test
+          version: ${{ env.FIXTURE_VERSION }}
+          dest: /tmp/install-from-cu129
+          channel: cu129
+
+      - name: Verify cu129 download
+        run: |
+          set -eux
+          ls -la /tmp/install-from-cu129
+          test -s /tmp/install-from-cu129/ar_actions_smoke_test-${{ env.FIXTURE_VERSION }}-py3-none-any.whl
+
+      # PENDING: TurboNext/.github#25 not yet merged to main, repoint at @main once it does
+      - name: Install from stable (proves the also-channel dual-publish worked)
+        uses: ./.github/actions/ar-python-install
+        with:
+          gcp-sa-key: ${{ secrets.PYPI_TN_READER_KEY }}
+          package: ar-actions-smoke-test
+          version: ${{ env.FIXTURE_VERSION }}
+          dest: /tmp/install-from-stable
+          channel: stable
+
+      - name: Verify stable download
+        run: |
+          set -eux
+          ls -la /tmp/install-from-stable
+          test -s /tmp/install-from-stable/ar_actions_smoke_test-${{ env.FIXTURE_VERSION }}-py3-none-any.whl
+
+      - name: All good
+        run: echo "ar-python-publish and ar-python-install both work end-to-end."
