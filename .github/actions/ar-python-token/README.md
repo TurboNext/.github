@@ -5,27 +5,32 @@ Python repos — the Devpi replacement — and assembles the matching index
 URL. Works for both directions: pass the **publisher** key to upload, the
 **reader** key to install.
 
-## Publishing
+`repository` (`pypi-tn`, `pypi-tn-cu129`, `pypi-tn-cu130`) can also be set
+via the `channel` input instead — a convenience for TurboNext's devpi-era
+channel names (`cu129`, `cu130`; anything else, including `stable`/`simple`/
+empty, resolves to `pypi-tn`). `channel` takes precedence over `repository`
+when both are set.
 
-Don't call this action directly for publishing — use
-[`reusable_pypi_publish.yml`](../../workflows/reusable_pypi_publish.yml),
-which wraps it with checkout/build/twine-upload:
+## Most consumers don't need to call this directly
 
-```yaml
-jobs:
-  publish:
-    uses: TurboNext/.github/.github/workflows/reusable_pypi_publish.yml@main
-    with:
-      repository: pypi-tn-cu129   # or pypi-tn / pypi-tn-cu130
-    secrets:
-      PYPI_TN_PUBLISHER_KEY: ${{ secrets.PYPI_TN_PUBLISHER_KEY }}
-```
+For the two common shapes, use the higher-level actions that wrap this
+one instead:
 
-## Consuming (install)
+- **Publishing** (`twine upload`, one or two channels) —
+  [`ar-python-publish`](../ar-python-publish/)
+- **Installing a single pinned package** (`pip download PKG==VERSION
+  --no-deps`) — [`ar-python-install`](../ar-python-install/)
 
-There's no reusable workflow for this side — every current consumer installs
-from inside a Dockerfile `RUN` line, which can't be "a workflow step". Call
-the action directly, then pass `index-url` into the build:
+Call `ar-python-token` directly only when you need the raw
+`token`/`index-url` for something those don't cover — most commonly, a
+Dockerfile `RUN` line, or a `uv`-based install with flags those actions
+don't expose.
+
+## Consuming inside a Dockerfile
+
+There's no action for this side — a Dockerfile `RUN` line can't be "a
+workflow step". Call this action directly, then pass `index-url` into
+the build:
 
 ```yaml
 - id: ar-token
@@ -59,6 +64,14 @@ RUN --mount=type=secret,id=pypi_index_url \
     uv pip install --keyring-provider subprocess \
       --extra-index-url "$(cat /run/secrets/pypi_index_url)" some-package
 ```
+
+## Non-GitHub-Actions consumers
+
+This same direct-call pattern applies outside GitHub Actions too — a
+developer's laptop, a baremetal node — just mint the token with `gcloud
+auth print-access-token` or the Python `google-auth` library instead of
+this action. See `tools/cluster/node/setup-tllm-dev.sh` and
+`tests/e2e/baremetal-conformance/` in `vllm-tn` for worked examples.
 
 ## Inputs / outputs
 
