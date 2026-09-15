@@ -12,11 +12,11 @@ body:
         Please provide a clear and concise description of what the bug is.
 
         If possible, include the error message you got, with the full traceback.
-        
+
         Please also provide the expected behaviour.
       placeholder: |
         ## Bug description:
-        
+
         ## Expected behaviour:
     validations:
       required: true
@@ -40,11 +40,11 @@ body:
          Please collect as much info about environment as possible:
       value: |
         ## Environment details:
-        
+
         - TLLM version:
         - cluster configuration:
         - hardware configuration:
-        - logs: 
+        - logs:
         - model name:
         - what was running when the issue occurred:
     validations:
