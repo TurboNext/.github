@@ -4,10 +4,32 @@ on:
   workflow_call:
     inputs:
       repository:
-        description: 'AR Python repository id (pypi-tn, pypi-tn-cu129, pypi-tn-cu130).'
+        description: >-
+          AR Python repository id (pypi-tn, pypi-tn-cu129, pypi-tn-cu130).
+          Ignored if channel is set.
         required: false
         type: string
         default: 'pypi-tn'
+      channel:
+        description: >-
+          Convenience alternative to repository (cu129, cu130; anything
+          else, including stable/simple/empty, resolves to pypi-tn).
+        required: false
+        type: string
+        default: ''
+      also-repository:
+        description: >-
+          Optional second AR repository id to also publish to (e.g. stable,
+          alongside a CUDA-variant repository). Ignored if also-channel is
+          set. Leave both also-* inputs empty to skip.
+        required: false
+        type: string
+        default: ''
+      also-channel:
+        description: 'Convenience alternative to also-repository.'
+        required: false
+        type: string
+        default: ''
       project:
         description: 'GCP project hosting the AR repository.'
         required: false
@@ -57,20 +79,15 @@ jobs:
       - name: Build
         run: ${{ inputs.build-command }}
 
-      - name: Mint Artifact Registry token
-        id: ar-token
-        uses: TurboNext/.github/.github/actions/ar-python-token@artemk/reusable-ar-workflows
+      # PENDING: TurboNext/.github#25 not yet merged to main, repoint at @main once it does
+      - name: Publish to Artifact Registry
+        uses: TurboNext/.github/.github/actions/ar-python-publish@artemk/reusable-ar-workflows
         with:
           gcp-sa-key: ${{ secrets.PYPI_TN_PUBLISHER_KEY }}
+          dist-glob: ${{ inputs.working-directory }}/dist/*
           repository: ${{ inputs.repository }}
+          channel: ${{ inputs.channel }}
+          also-repository: ${{ inputs.also-repository }}
+          also-channel: ${{ inputs.also-channel }}
           project: ${{ inputs.project }}
           location: ${{ inputs.location }}
-
-      - name: Upload with twine
-        run: |
-          pip install twine
-          twine upload \
-            -u oauth2accesstoken \
-            -p "${{ steps.ar-token.outputs.token }}" \
-            --repository-url https://${{ inputs.location }}-python.pkg.dev/${{ inputs.project }}/${{ inputs.repository }}/ \
-            dist/*
