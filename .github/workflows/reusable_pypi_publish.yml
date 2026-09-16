@@ -66,9 +66,8 @@ jobs:
       - name: Build
         run: ${{ inputs.build-command }}
 
-      # PENDING: TurboNext/.github#25 not yet merged to main, repoint at @main once it does
       - name: Publish to Artifact Registry
-        uses: TurboNext/.github/.github/actions/ar-python-publish@artemk/reusable-ar-workflows
+        uses: TurboNext/.github/.github/actions/ar-python-publish@main
         with:
           gcp-sa-key: ${{ secrets.PYPI_TN_PUBLISHER_KEY }}
           dist-glob: ${{ inputs.working-directory }}/dist/*

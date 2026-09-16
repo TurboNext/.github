@@ -50,10 +50,9 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    # PENDING: TurboNext/.github#25 not yet merged to main, repoint at @main once it does
     - name: Mint Artifact Registry reader token
       id: token
-      uses: TurboNext/.github/.github/actions/ar-python-token@artemk/reusable-ar-workflows
+      uses: TurboNext/.github/.github/actions/ar-python-token@main
       with:
         gcp-sa-key: ${{ inputs.gcp-sa-key }}
         repository: ${{ inputs.repository }}
