@@ -1,0 +1,73 @@
+name: 'AR Python Install'
+description: >-
+  Mint a short-lived OAuth2 reader token for GCP Artifact Registry and
+  pip download a single package (optionally version-pinned, no deps)
+  from it. Deliberately scoped to that one shape -- the wide variety of
+  uv-based installs across the org (--prerelease, --index-strategy,
+  keyring quirks, multiple packages at once) don't share enough shape to
+  force through one interface; those stay bespoke and can call
+  ar-python-token directly for the index-url/token.
+
+inputs:
+  gcp-sa-key:
+    description: 'pypi-tn reader service account JSON key.'
+    required: true
+  package:
+    description: 'Package name to download (e.g. tier-coordinator).'
+    required: true
+  version:
+    description: >-
+      Exact version to pin (e.g. 0.1.2.dev20260601+78576fda5f). Leave
+      empty to download the latest version in the target repository.
+    required: false
+    default: ''
+  dest:
+    description: 'Directory to download into.'
+    required: false
+    default: '.'
+  repository:
+    description: >-
+      AR Python repository id (pypi-tn, pypi-tn-cu129, pypi-tn-cu130).
+      Ignored if channel is set.
+    required: false
+    default: 'pypi-tn'
+  channel:
+    description: >-
+      Convenience alternative to repository: TurboNext's devpi-era channel
+      name (cu129, cu130; anything else, including stable/simple/empty,
+      resolves to pypi-tn). Takes precedence over repository when set.
+    required: false
+    default: ''
+  project:
+    description: 'GCP project hosting the AR repository.'
+    required: false
+    default: 'turbonext-first-project'
+  location:
+    description: 'GCP region hosting the AR repository.'
+    required: false
+    default: 'europe-west1'
+
+runs:
+  using: 'composite'
+  steps:
+    # PENDING: TurboNext/.github#25 not yet merged to main, repoint at @main once it does
+    - name: Mint Artifact Registry reader token
+      id: token
+      uses: TurboNext/.github/.github/actions/ar-python-token@artemk/reusable-ar-workflows
+      with:
+        gcp-sa-key: ${{ inputs.gcp-sa-key }}
+        repository: ${{ inputs.repository }}
+        channel: ${{ inputs.channel }}
+        project: ${{ inputs.project }}
+        location: ${{ inputs.location }}
+
+    - name: Download
+      shell: bash
+      run: |
+        mkdir -p "${{ inputs.dest }}"
+        PACKAGE_SPEC="${{ inputs.package }}"
+        if [ -n "${{ inputs.version }}" ]; then
+          PACKAGE_SPEC="${PACKAGE_SPEC}==${{ inputs.version }}"
+        fi
+        pip download "$PACKAGE_SPEC" --dest "${{ inputs.dest }}" --no-deps --index-url \
+          "${{ steps.token.outputs.index-url }}"

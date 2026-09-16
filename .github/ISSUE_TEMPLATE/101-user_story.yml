@@ -6,10 +6,10 @@ type: "User Story"
 body:
   - type: markdown
     attributes:
-      value: |  
-        ## User Story  
-        A User Story describes an abstract goal that contributes to a Topic.  
-        It is usually created by a user as a user requirement. 
+      value: |
+        ## User Story
+        A User Story describes an abstract goal that contributes to a Topic.
+        It is usually created by a user as a user requirement.
 
   - type: textarea
     id: description
@@ -34,7 +34,7 @@ body:
     attributes:
       label: Acceptance Criteria / Definition of Done
       description: Clearly define when this story is considered done.
-      placeholder: |  
+      placeholder: |
         - [ ] acceptance criterion 1
     validations:
       required: true
@@ -45,7 +45,7 @@ body:
       label: Definition of Done
       description: >
         Clearly define when this feature is considered done. You can use provided template or modify it as needed.
-      placeholder: |  
+      placeholder: |
         - [ ] user story was validated by non-author
         - [ ] user story was merged to main branch
         - [ ] tests for this user story were added and passed

@@ -1,0 +1,78 @@
+name: Reusable PyPI Publish (Artifact Registry)
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+        description: >-
+          AR Python repository id (pypi-tn, pypi-tn-cu129, pypi-tn-cu130).
+          Ignored if channel is set.
+        required: false
+        type: string
+        default: 'pypi-tn'
+      channel:
+        description: >-
+          Convenience alternative to repository (cu129, cu130; anything
+          else, including stable/simple/empty, resolves to pypi-tn).
+        required: false
+        type: string
+        default: ''
+      project:
+        description: 'GCP project hosting the AR repository.'
+        required: false
+        type: string
+        default: 'turbonext-first-project'
+      location:
+        description: 'GCP region hosting the AR repository.'
+        required: false
+        type: string
+        default: 'europe-west1'
+      python-version:
+        required: false
+        type: string
+        default: '3.12'
+      working-directory:
+        required: false
+        type: string
+        default: '.'
+      build-command:
+        description: 'Command that produces dist/* before upload.'
+        required: false
+        type: string
+        default: 'python -m build'
+    secrets:
+      PYPI_TN_PUBLISHER_KEY:
+        description: 'pypi-tn publisher service account JSON key.'
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@v7.0.0
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install default build backend
+        run: pip install --upgrade build
+
+      - name: Build
+        run: ${{ inputs.build-command }}
+
+      # PENDING: TurboNext/.github#25 not yet merged to main, repoint at @main once it does
+      - name: Publish to Artifact Registry
+        uses: TurboNext/.github/.github/actions/ar-python-publish@artemk/reusable-ar-workflows
+        with:
+          gcp-sa-key: ${{ secrets.PYPI_TN_PUBLISHER_KEY }}
+          dist-glob: ${{ inputs.working-directory }}/dist/*
+          repository: ${{ inputs.repository }}
+          channel: ${{ inputs.channel }}
+          project: ${{ inputs.project }}
+          location: ${{ inputs.location }}
