@@ -2,13 +2,9 @@
 
 Mints a short-lived `pypi-tn` publisher token (via
 [`ar-python-token`](../ar-python-token/)) and `twine upload`s one or more
-dist globs. Optionally also publishes the same dist to a second
-channel/repository in the same run — e.g. a CUDA-variant repo plus
-`stable`, when the build happens to be the configured default variant.
+dist globs.
 
 ## Usage
-
-Simple case — one repository:
 
 ```yaml
 - uses: TurboNext/.github/.github/actions/ar-python-publish@main
@@ -21,8 +17,8 @@ Simple case — one repository:
 lives elsewhere (e.g. `./*.whl` for a promote workflow working in the
 job's root, or `dist/cu129/*.whl` for a CUDA-namespaced build dir).
 
-Dual-channel case — also publish to `stable` when this build is the
-default variant:
+To publish the same dist to more than one repository/channel (e.g. a
+CUDA-variant repo plus `stable`), call this action once per target:
 
 ```yaml
 - uses: TurboNext/.github/.github/actions/ar-python-publish@main
@@ -30,13 +26,14 @@ default variant:
     gcp-sa-key: ${{ secrets.PYPI_TN_PUBLISHER_KEY }}
     dist-glob: dist/cu${{ steps.vars.outputs.cuda_nodot }}/*.whl
     channel: cu${{ steps.vars.outputs.cuda_nodot }}
-    also-channel: ${{ steps.vars.outputs.cuda_version == needs.prepare.outputs.cuda_default && 'stable' || '' }}
-```
 
-Leave both `also-repository`/`also-channel` empty (the default) to skip
-the second publish entirely — that ternary pattern is how to make it
-conditional based on a runtime value, since the inputs themselves can't
-carry an `if`.
+- if: steps.vars.outputs.cuda_version == needs.prepare.outputs.cuda_default
+  uses: TurboNext/.github/.github/actions/ar-python-publish@main
+  with:
+    gcp-sa-key: ${{ secrets.PYPI_TN_PUBLISHER_KEY }}
+    dist-glob: dist/cu${{ steps.vars.outputs.cuda_nodot }}/*.whl
+    channel: stable
+```
 
 ## What it doesn't cover
 

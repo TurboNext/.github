@@ -17,19 +17,6 @@ on:
         required: false
         type: string
         default: ''
-      also-repository:
-        description: >-
-          Optional second AR repository id to also publish to (e.g. stable,
-          alongside a CUDA-variant repository). Ignored if also-channel is
-          set. Leave both also-* inputs empty to skip.
-        required: false
-        type: string
-        default: ''
-      also-channel:
-        description: 'Convenience alternative to also-repository.'
-        required: false
-        type: string
-        default: ''
       project:
         description: 'GCP project hosting the AR repository.'
         required: false
@@ -87,7 +74,5 @@ jobs:
           dist-glob: ${{ inputs.working-directory }}/dist/*
           repository: ${{ inputs.repository }}
           channel: ${{ inputs.channel }}
-          also-repository: ${{ inputs.also-repository }}
-          also-channel: ${{ inputs.also-channel }}
           project: ${{ inputs.project }}
           location: ${{ inputs.location }}

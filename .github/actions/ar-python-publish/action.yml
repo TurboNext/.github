@@ -1,9 +1,7 @@
 name: 'AR Python Publish'
 description: >-
   Mint a short-lived OAuth2 token for GCP Artifact Registry and
-  twine-upload one or more dist globs. Optionally also publishes the
-  same dist to a second channel/repository (e.g. a CUDA-variant repo
-  plus stable, when the build matches the configured default variant).
+  twine-upload one or more dist globs.
 
 inputs:
   gcp-sa-key:
@@ -24,17 +22,6 @@ inputs:
       Convenience alternative to repository: TurboNext's devpi-era channel
       name (cu129, cu130; anything else, including stable/simple/empty,
       resolves to pypi-tn). Takes precedence over repository when set.
-    required: false
-    default: ''
-  also-repository:
-    description: >-
-      Optional second AR repository id to also publish dist-glob to (e.g.
-      stable, alongside a CUDA-variant repository). Ignored if
-      also-channel is set. Leave both also-* inputs empty to skip.
-    required: false
-    default: ''
-  also-channel:
-    description: 'Convenience alternative to also-repository.'
     required: false
     default: ''
   project:
@@ -68,27 +55,4 @@ runs:
           -u oauth2accesstoken \
           -p "${{ steps.token.outputs.token }}" \
           --repository-url "https://${{ inputs.location }}-python.pkg.dev/${{ inputs.project }}/${{ steps.token.outputs.repository }}/" \
-          ${{ inputs.dist-glob }}
-
-    # PENDING: TurboNext/.github#25 not yet merged to main, repoint at @main once it does
-    - name: Mint Artifact Registry publisher token (also-repository)
-      id: also-token
-      if: inputs.also-repository != '' || inputs.also-channel != ''
-      uses: TurboNext/.github/.github/actions/ar-python-token@artemk/reusable-ar-workflows
-      with:
-        gcp-sa-key: ${{ inputs.gcp-sa-key }}
-        repository: ${{ inputs.also-repository }}
-        channel: ${{ inputs.also-channel }}
-        project: ${{ inputs.project }}
-        location: ${{ inputs.location }}
-
-    - name: Upload (also-repository)
-      shell: bash
-      if: inputs.also-repository != '' || inputs.also-channel != ''
-      run: |
-        pip install --quiet twine
-        twine upload \
-          -u oauth2accesstoken \
-          -p "${{ steps.also-token.outputs.token }}" \
-          --repository-url "https://${{ inputs.location }}-python.pkg.dev/${{ inputs.project }}/${{ steps.also-token.outputs.repository }}/" \
           ${{ inputs.dist-glob }}
