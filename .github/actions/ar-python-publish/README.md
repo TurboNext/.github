@@ -10,30 +10,12 @@ dist globs.
 - uses: TurboNext/.github/.github/actions/ar-python-publish@main
   with:
     gcp-sa-key: ${{ secrets.PYPI_TN_PUBLISHER_KEY }}
-    channel: cu129   # or repository: pypi-tn-cu129
 ```
 
 `dist-glob` defaults to `dist/*`; pass it explicitly if your build output
 lives elsewhere (e.g. `./*.whl` for a promote workflow working in the
-job's root, or `dist/cu129/*.whl` for a CUDA-namespaced build dir).
-
-To publish the same dist to more than one repository/channel (e.g. a
-CUDA-variant repo plus `stable`), call this action once per target:
-
-```yaml
-- uses: TurboNext/.github/.github/actions/ar-python-publish@main
-  with:
-    gcp-sa-key: ${{ secrets.PYPI_TN_PUBLISHER_KEY }}
-    dist-glob: dist/cu${{ steps.vars.outputs.cuda_nodot }}/*.whl
-    channel: cu${{ steps.vars.outputs.cuda_nodot }}
-
-- if: steps.vars.outputs.cuda_version == needs.prepare.outputs.cuda_default
-  uses: TurboNext/.github/.github/actions/ar-python-publish@main
-  with:
-    gcp-sa-key: ${{ secrets.PYPI_TN_PUBLISHER_KEY }}
-    dist-glob: dist/cu${{ steps.vars.outputs.cuda_nodot }}/*.whl
-    channel: stable
-```
+job's root). `repository` defaults to `pypi-tn`, the one repo every
+package publishes to now.
 
 ## What it doesn't cover
 

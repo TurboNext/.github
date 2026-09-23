@@ -5,18 +5,15 @@ Python repos — the Devpi replacement — and assembles the matching index
 URL. Works for both directions: pass the **publisher** key to upload, the
 **reader** key to install.
 
-`repository` (`pypi-tn`, `pypi-tn-cu129`, `pypi-tn-cu130`) can also be set
-via the `channel` input instead — a convenience for TurboNext's devpi-era
-channel names (`cu129`, `cu130`; anything else, including `stable`/`simple`/
-empty, resolves to `pypi-tn`). `channel` takes precedence over `repository`
-when both are set.
+Every package lives in one `pypi-tn` repository now, so `repository`
+defaults to that and most callers never need to set it.
 
 ## Most consumers don't need to call this directly
 
 For the two common shapes, use the higher-level actions that wrap this
 one instead:
 
-- **Publishing** (`twine upload`, one or two channels) —
+- **Publishing** (`twine upload`) —
   [`ar-python-publish`](../ar-python-publish/)
 - **Installing a single pinned package** (`pip download PKG==VERSION
   --no-deps`) — [`ar-python-install`](../ar-python-install/)
