@@ -4,19 +4,10 @@ on:
   workflow_call:
     inputs:
       repository:
-        description: >-
-          AR Python repository id (pypi-tn, pypi-tn-cu129, pypi-tn-cu130).
-          Ignored if channel is set.
+        description: 'AR Python repository id.'
         required: false
         type: string
         default: 'pypi-tn'
-      channel:
-        description: >-
-          Convenience alternative to repository (cu129, cu130; anything
-          else, including stable/simple/empty, resolves to pypi-tn).
-        required: false
-        type: string
-        default: ''
       project:
         description: 'GCP project hosting the AR repository.'
         required: false
@@ -72,6 +63,5 @@ jobs:
           gcp-sa-key: ${{ secrets.PYPI_TN_PUBLISHER_KEY }}
           dist-glob: ${{ inputs.working-directory }}/dist/*
           repository: ${{ inputs.repository }}
-          channel: ${{ inputs.channel }}
           project: ${{ inputs.project }}
           location: ${{ inputs.location }}

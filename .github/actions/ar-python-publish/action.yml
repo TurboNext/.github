@@ -12,18 +12,9 @@ inputs:
     required: false
     default: 'dist/*'
   repository:
-    description: >-
-      AR Python repository id (pypi-tn, pypi-tn-cu129, pypi-tn-cu130).
-      Ignored if channel is set.
+    description: 'AR Python repository id.'
     required: false
     default: 'pypi-tn'
-  channel:
-    description: >-
-      Convenience alternative to repository: TurboNext's devpi-era channel
-      name (cu129, cu130; anything else, including stable/simple/empty,
-      resolves to pypi-tn). Takes precedence over repository when set.
-    required: false
-    default: ''
   project:
     description: 'GCP project hosting the AR repository.'
     required: false
@@ -42,7 +33,6 @@ runs:
       with:
         gcp-sa-key: ${{ inputs.gcp-sa-key }}
         repository: ${{ inputs.repository }}
-        channel: ${{ inputs.channel }}
         project: ${{ inputs.project }}
         location: ${{ inputs.location }}
 
